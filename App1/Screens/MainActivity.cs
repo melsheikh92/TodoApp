@@ -2,76 +2,103 @@
 using Android.Widget;
 using Android.OS;
 using Android.Support.Design.Widget;
-using Realms;
-using System.Linq;
-using System.Collections.Generic;
+
 using App1.Screens;
+using GalaSoft.MvvmLight.Views;
+using NotesPortable.Models;
+using Android.Views;
+using System;
 
 namespace App1
 {
     [Activity(Label = "#TODO", MainLauncher = true)]
-    public class MainActivity : Activity
+    public class MainActivity : ActivityBase
     {
-        Realm realm;
+
+
+        MainViewModel mainViewModel;
+
         FloatingActionButton fab;
         ListView listviewNotes;
+        EditText input; //for the alert
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
 
             SetContentView(Resource.Layout.Main);
-            realm = Realm.GetInstance();
             listviewNotes = FindViewById<ListView>(Resource.Id.listviewNotes);
             fab = FindViewById<FloatingActionButton>(Resource.Id.fab);
             fab.Click += Fab_Click;
-            realm.RealmChanged += MainActivity_RealmChanged;
-            showAll();
+            input = new EditText(this);
+            mainViewModel = new MainViewModel();
+            listviewNotes.Adapter = MissingExtensions.GetAdapter(mainViewModel.ObservavleNotes, GetTaskAdapter);
+            
+        }
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
 
+
+            listviewNotes.Adapter = null;
+        }
+      
+        
+        private View GetTaskAdapter(int position,
+                                           Note note,
+                                           View convertView)
+        {
+            convertView = LayoutInflater.Inflate(Resource.Layout.listitemNote, null);
+            TextView tvNote = convertView.FindViewById<TextView>(Resource.Id.tvNote);
+            CheckBox checkbox = convertView.FindViewById<CheckBox>(Resource.Id.checIsDone);
+            tvNote.Text = note.Text;
+            checkbox.Checked = note.IsDone;
+            checkbox.CheckedChange += mainViewModel.ItemChangeCheck(note, checkbox.Checked);
+            tvNote.Click += updateNote(note);
+
+            return convertView;
         }
 
-        private void MainActivity_RealmChanged(object sender, System.EventArgs e)
+        private EventHandler updateNote(Note note)
         {
-            showAll();
+            return delegate
+            {
+                AlertDialog.Builder alert = new AlertDialog.Builder(this);
+                input.InputType = Android.Text.InputTypes.TextVariationLongMessage;
+                input.Text = note.Text;
+                input.Hint = "#TODO";
+                input.SetHeight(200);
+                alert.SetView(input);
+                alert.SetTitle("New #TODO");
+                alert.SetNegativeButton("Cancel", delegate { });
+                alert.SetPositiveButton("Edit", mainViewModel.EditHandler(note, input));
+                alert.Show();
+                
+            };
+
+
         }
 
         private void Fab_Click(object sender, System.EventArgs e)
         {
 
-
             AlertDialog.Builder alert = new AlertDialog.Builder(this);
-            EditText input = new EditText(this);
             input.InputType = Android.Text.InputTypes.TextVariationLongMessage;
             input.Hint = "#TODO";
             input.SetHeight(200);
+            input.Text = "";
             alert.SetView(input);
             alert.SetTitle("New #TODO");
-            alert.SetNegativeButton("Cancel", delegate
-            {
+            alert.SetNegativeButton("Cancel", delegate { });
+            alert.SetPositiveButton("Add", mainViewModel.NewTodoHandler(input.Text));
 
 
-            });
-            alert.SetPositiveButton("Add", delegate
-            {
-                new System.Threading.Thread(() =>
-                {
-                    Realm.GetInstance().Write(() =>
-                {
-
-                    Realm.GetInstance().Add<Note>(new Note { Id = Realm.GetInstance().All<Note>().Count() + 1, Text = input.Text, IsDone = false });
-
-                });
-                }).Start();
-            });
             alert.Show();
 
-        }
-        void showAll()
-        {
-            List<Note> notes = realm.All<Note>().ToList();
-
-            NotesCustomAdapter adapter = new NotesCustomAdapter(this, notes);
-            listviewNotes.Adapter = adapter;
 
         }
+
+
     }
+
+
 }

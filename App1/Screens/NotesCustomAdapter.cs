@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
 using Android.App;
 using Android.Content;
-using Android.OS;
 using Android.Runtime;
 using Android.Views;
 using Android.Widget;
 using Realms;
-using App1.Screens;
+using Android.Graphics;
+using NotesPortable.Models;
+
 namespace App1.Screens
 {
     class NotesCustomAdapter : ArrayAdapter
@@ -19,7 +17,7 @@ namespace App1.Screens
         private Activity mcontext;
         List<Note> notes;
         Realm realm;
-        public NotesCustomAdapter(Activity mcontext, List<Note> notes) : base(mcontext, Resource.Layout.listitemNote)
+        public NotesCustomAdapter(Activity mcontext, List<Note> notes ) : base(mcontext, Resource.Layout.listitemNote)
         {
             this.mcontext = mcontext;
             this.notes = notes;
@@ -43,11 +41,16 @@ namespace App1.Screens
             CheckBox checkbox = view.FindViewById<CheckBox>(Resource.Id.checIsDone);
             tvNote.Text = notes[position].Text;
             checkbox.Checked = notes[position].IsDone;
+
+            if (checkbox.Checked)
+            {
+                tvNote.PaintFlags = tvNote.PaintFlags | PaintFlags.StrikeThruText;
+            }
+            tvNote.Text = notes[position].Text;
+            checkbox.Checked = notes[position].IsDone;
             checkbox.CheckedChange += delegate
             {
-
-
-
+                
                 realm.Write(() => notes[position].IsDone = checkbox.Checked);
 
 
